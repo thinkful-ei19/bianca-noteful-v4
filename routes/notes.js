@@ -6,12 +6,15 @@ const router = express.Router();
 const mongoose = require('mongoose');
 
 const Note = require('../models/note');
+const Tag = require('../models/tag');
+const Folder = require('../models/folder');
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/notes', (req, res, next) => {
   const { searchTerm, folderId, tagId } = req.query;
+  const userId = req.user.id;
 
-  let filter = {};
+  let filter = { userId };
 
   /**
    * BONUS CHALLENGE - Search both title and content using $OR Operator
@@ -53,7 +56,7 @@ router.get('/notes/:id', (req, res, next) => {
     return next(err);
   }
 
-  Note.findB(id)
+  Note.findOne({ _id: id, userId })
     .populate('tags')
     .then(result => {
       if (result) {
@@ -70,6 +73,7 @@ router.get('/notes/:id', (req, res, next) => {
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/notes', (req, res, next) => {
   const { title, content, folderId, tags } = req.body;
+  const userId = req.user.id;
 
   /***** Never trust users - validate input *****/
   if (!title) {
@@ -84,11 +88,36 @@ router.post('/notes', (req, res, next) => {
         const err = new Error('The `id` is not valid');
         err.status = 400;
         return next(err);
+      }else {
+        Tag.findOne({ _id: tag, userId:userId })
+        .then((result) => {
+          if(!result){
+            const err = new Error('The tag id is not found');
+            err.status = 400;
+            next(err);
+          } 
+        })
       }
     });
   }
+  if(folderId) {
+    if (!mongoose.Types.ObjectId.isValid(folderId)) {
+      const err = new Error('The `id` is not valid');
+      err.status = 400;
+      return next(err);
+    }else {
+      Folder.findOne({ _id: folderId, userId:userId })
+      .then((result) => {
+        if(!result){
+          const err = new Error('The folder is not found');
+          err.status = 400;
+          next(err);
+        } 
+      })
+    }
+  };
 
-  const newItem = { title, content, folderId, tags };
+  const newItem = { title, content, folderId, tags, userId };
 
   Note.create(newItem)
     .then(result => {
@@ -102,7 +131,10 @@ router.post('/notes', (req, res, next) => {
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/notes/:id', (req, res, next) => {
   const { id } = req.params;
-  const { title, content, folderId, tags } = req.body;
+ 
+  const { title, content, folderId, tags} = req.body;
+  const userId = req.user.id;
+  const updateItem = { title, content, tags, userId };
 
   /***** Never trust users - validate input *****/
   if (!title) {
@@ -127,12 +159,37 @@ router.put('/notes/:id', (req, res, next) => {
         const err = new Error('The `id` is not valid');
         err.status = 400;
         return next(err);
+      }else {
+        Tag.findOne({ _id: tag, userId: userId })
+        .then((result) => {
+          if(!result){
+            const err = new Error('The `id` is not found');
+            err.status = 400;
+            next(err);
+          } 
+        })
       }
     });
   }
+  if(folderId) {
+    if (!mongoose.Types.ObjectId.isValid(folderId)) {
+      const err = new Error('The `id` is not valid');
+      err.status = 400;
+      return next(err);
+    }else {
+      Folder.findOne({ _id: folderId, userId:userId })
+      .then((result) => {
+        if(!result){
+          const err = new Error('The folder is not found');
+          err.status = 400;
+          next(err);
+        } 
+      })
+    }
+  };
 
 
-  const updateItem = { title, content, tags };
+  
   const options = { new: true };
 
   Note.findByIdAndUpdate(id, updateItem, options)
@@ -152,10 +209,15 @@ router.put('/notes/:id', (req, res, next) => {
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/notes/:id', (req, res, next) => {
   const { id } = req.params;
+  const userId = req.user.id;
 
-  Note.findByIdAndRemove(id)
-    .then(() => {
+  Note.findOneAndRemove({_id: id, userId})
+    .then((result) => {
+      if(result){
       res.status(204).end();
+      } else {
+        next();
+      }
     })
     .catch(err => {
       next(err);
