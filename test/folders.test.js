@@ -21,7 +21,7 @@ const expect = chai.expect;
 chai.use(chaiHttp);
 
 
-describe.only('Noteful API - Folders', function () {
+describe('Noteful API - Folders', function () {
 
   let user;
   let token; 
@@ -38,7 +38,7 @@ describe.only('Noteful API - Folders', function () {
       Folder.ensureIndexes()
     ]).then(([users]) => {
       user = users[0];
-      token = jwt.sign({ user }, JWT_SECRET, { subject: user.username});
+      token = jwt.sign({ user }, JWT_SECRET, { subject: user.username });
     });
     
   });

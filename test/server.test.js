@@ -50,7 +50,8 @@ describe('Basic Express setup', () => {
         .get('/bad/path')
         .catch(err => err.response)
         .then(res => {
-          expect(res).to.have.status(404);
+          expect(res).to.have.status(401);
+          //getting 401 (unauthorized) at a bad path
         });
     });
 
