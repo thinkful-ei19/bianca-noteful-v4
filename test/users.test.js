@@ -193,7 +193,7 @@ describe.only('Noteful API - Users', function () {
         
       });
       it('Should trim fullname', function() {
-        const testUser = { username, password, fullname: `${fullname}` };
+        const testUser = { username, password, fullname: ` ${fullname} ` };
         return chai
         .request(app)
         .post('/api/users')
@@ -201,8 +201,16 @@ describe.only('Noteful API - Users', function () {
         .catch(err => err.response)
         .then(res => {
             expect(res).to.have.status(201);
-            expect(res.body.fullname).to.equal('Example User');
-           
+            expect(res.body).to.be.an('object');
+            expect(res.body).to.have.keys('username', 'fullname', 'id');
+            expect(res.body.fullname).to.equal(fullname);
+            expect(res.body.username).to.equal(username);
+            return User.findOne({ username });
+        })
+        .then(user => {
+          expect(user).to.not.be.null;
+          expect(user.fullname).to.equal(fullname);
+        
         });
       });
     });
